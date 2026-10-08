@@ -1,0 +1,15 @@
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import { App } from './app/App'
+
+const rootEl = document.getElementById('root')
+if (rootEl === null) {
+  throw new Error('No se encontró el elemento #root')
+}
+
+createRoot(rootEl).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)

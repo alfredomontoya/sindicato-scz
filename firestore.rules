@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function firmado() {
+      return request.auth != null;
+    }
+
+    function perfilExiste() {
+      return exists(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+
+    function rol() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol;
+    }
+
+    function tieneRol(permitidos) {
+      return firmado() && perfilExiste() && (rol() in permitidos);
+    }
+
+    // Usuarios: cada usuario lee su propio perfil; solo admin lista, crea y modifica.
+    // El primer administrador se crea manualmente desde la consola.
+    match /usuarios/{uid} {
+      allow get: if firmado() && (request.auth.uid == uid || tieneRol(['admin']));
+      allow list: if tieneRol(['admin']);
+      allow create, update: if tieneRol(['admin']);
+      allow delete: if false;
+    }
+
+    // Personas: lectura para usuarios registrados; escritura solo admin y registro.
+    // `nombreBusqueda` lo mantiene el sistema (no editable a mano en consola).
+    match /personas/{id} {
+      allow read: if firmado() && perfilExiste();
+      allow create, update: if tieneRol(['admin', 'registro']);
+      allow delete: if false;
+    }
+
+    // Aportes: nunca se editan ni eliminan; solo se crean (vigentes) o se
+    // anulan con motivo. El número de recibo lo asigna la transacción.
+    match /aportes/{id} {
+      allow read: if firmado() && perfilExiste();
+      allow create: if tieneRol(['admin', 'registro'])
+        && request.resource.data.estado == 'vigente'
+        && request.resource.data.monto is number
+        && request.resource.data.monto > 0
+        && request.resource.data.personaId is string
+        && request.resource.data.numeroRecibo is string
+        && request.resource.data.usuarioRegistroId == request.auth.uid;
+      allow update: if tieneRol(['admin', 'registro'])
+        && resource.data.estado == 'vigente'
+        && request.resource.data.estado == 'anulado'
+        && request.resource.data.motivoAnulacion is string
+        && request.resource.data.motivoAnulacion.size() >= 3
+        && request.resource.data.usuarioAnulacionId == request.auth.uid
+        && request.resource.data.diff(resource.data).changedKeys()
+          .hasOnly(['estado', 'motivoAnulacion', 'usuarioAnulacionId', 'fechaAnulacion', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    // Contador del correlativo de recibos: solo lo mueve la transacción.
+    match /contadores/{id} {
+      allow read: if firmado() && perfilExiste();
+      allow write: if tieneRol(['admin', 'registro']);
+      allow delete: if false;
+    }
+
+    // Auditoría: cualquiera registrado puede escribir eventos; solo admin lee.
+    // Nunca se modifica ni elimina.
+    match /auditoria/{id} {
+      allow read: if tieneRol(['admin']);
+      allow create: if firmado() && perfilExiste()
+        && request.resource.data.usuarioId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
