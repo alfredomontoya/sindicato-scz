@@ -8,7 +8,10 @@ import {
   type ReactNode,
 } from 'react'
 import { auth } from '@/firebase/config'
-import { signIn as firebaseSignIn, signOut as firebaseSignOut } from '@/firebase/auth'
+import {
+  signInConUsuario as firebaseSignIn,
+  signOut as firebaseSignOut,
+} from '@/firebase/auth'
 import type { Usuario } from '@/types'
 import { getUsuario } from '@/features/usuarios/services/usuarioService'
 
@@ -16,7 +19,7 @@ export interface AuthContextValue {
   user: User | null
   profile: Usuario | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (usuario: string, password: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -80,9 +83,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       profile,
       loading,
-      signIn: async (email: string, password: string) => {
+      signIn: async (usuario: string, password: string) => {
         try {
-          const fbUser = await firebaseSignIn(email.trim(), password)
+          const fbUser = await firebaseSignIn(usuario.trim(), password)
           const perfil = await getUsuario(fbUser.uid)
           if (perfil === null) {
             throw new Error(

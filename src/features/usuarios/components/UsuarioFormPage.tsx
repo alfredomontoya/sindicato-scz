@@ -15,6 +15,7 @@ import {
   updateUsuario,
 } from '../services/usuarioService'
 import {
+  emailNuevoUsuario,
   usuarioCreateSchema,
   usuarioEditSchema,
   type UsuarioCreateValues,
@@ -46,7 +47,7 @@ export function UsuarioFormPage({ modo }: { modo: 'nuevo' | 'editar' }) {
     ),
     values: {
       nombre: esEdicion ? (usuario?.nombre ?? '') : '',
-      email: esEdicion ? (usuario?.email ?? '') : '',
+      usuario: esEdicion ? (usuario?.email ?? '').split('@')[0] ?? '' : '',
       password: '',
       rol: esEdicion ? (usuario?.rol ?? 'consulta') : 'consulta',
       estado: esEdicion ? (usuario?.estado ?? true) : true,
@@ -116,17 +117,18 @@ export function UsuarioFormPage({ modo }: { modo: 'nuevo' | 'editar' }) {
           })
         }
       } else {
-        const nuevoId = await createUsuario(values)
+        const email = emailNuevoUsuario(values.usuario)
+        const nuevoId = await createUsuario({ ...values, email })
         if (user !== null) {
           auditar({
             usuarioId: user.uid,
             accion: 'usuario.crear',
             entidad: 'usuarios',
             entidadId: nuevoId,
-            descripcion: `${values.nombre} (${values.email})`,
+            descripcion: `${values.nombre} (${email})`,
           })
         }
-        setExito({ nombre: values.nombre.trim(), email: values.email.trim() })
+        setExito({ nombre: values.nombre.trim(), email })
       }
       await queryClient.invalidateQueries({ queryKey: ['usuarios'] })
       if (esEdicion) {
@@ -184,20 +186,25 @@ export function UsuarioFormPage({ modo }: { modo: 'nuevo' | 'editar' }) {
         {!esEdicion && (
           <>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="email" className="text-sm font-medium">
-                Correo electrónico *
+              <label htmlFor="usuario" className="text-sm font-medium">
+                Usuario *
               </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="usuario@sindicato.bo"
-                className={inputClass}
-                {...register('email')}
-              />
-              {errors.email !== undefined && (
+              <div className="flex items-center gap-0">
+                <input
+                  id="usuario"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="nombre.apellido"
+                  className={`${inputClass} rounded-r-none`}
+                  {...register('usuario')}
+                />
+                <span className="flex h-10 items-center rounded-r-md border border-l-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+                  @sindicato.com
+                </span>
+              </div>
+              {errors.usuario !== undefined && (
                 <p role="alert" className="text-sm text-destructive">
-                  {errors.email.message}
+                  {errors.usuario.message}
                 </p>
               )}
             </div>

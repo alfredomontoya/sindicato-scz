@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { DOMINIO_USUARIOS } from '@/features/auth/constants'
 
 const rolSchema = z.enum(['admin', 'registro', 'consulta'], {
   errorMap: () => ({ message: 'Seleccione un rol válido.' }),
@@ -6,11 +7,16 @@ const rolSchema = z.enum(['admin', 'registro', 'consulta'], {
 
 export const usuarioCreateSchema = z.object({
   nombre: z.string().trim().min(2, 'Ingrese el nombre (mínimo 2 caracteres).').max(100),
-  email: z
+  usuario: z
     .string()
     .trim()
-    .min(1, 'Ingrese el correo electrónico.')
-    .email('Ingrese un correo electrónico válido.'),
+    .toLowerCase()
+    .min(2, 'Ingrese el nombre de usuario.')
+    .max(64)
+    .regex(
+      /^[a-z0-9._-]+$/,
+      'Solo letras minúsculas, números, punto, guion y guion bajo.',
+    ),
   password: z
     .string()
     .min(6, 'La contraseña debe tener al menos 6 caracteres.')
@@ -20,6 +26,11 @@ export const usuarioCreateSchema = z.object({
 })
 
 export type UsuarioCreateValues = z.infer<typeof usuarioCreateSchema>
+
+/** Correo institucional que recibirá la cuenta nueva. */
+export function emailNuevoUsuario(usuario: string): string {
+  return `${usuario}@${DOMINIO_USUARIOS}`
+}
 
 export const usuarioEditSchema = z.object({
   nombre: z.string().trim().min(2, 'Ingrese el nombre (mínimo 2 caracteres).').max(100),

@@ -35,7 +35,7 @@ export function AppLayout() {
       <header className="no-print flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
         <Link to="/" className="flex items-center gap-3" aria-label="Inicio">
           <img
-            src="/escudo-santa-cruz.webp"
+            src="/escudo-santa-cruz-simple.png"
             alt="Escudo de Santa Cruz"
             className="h-12 w-auto"
           />

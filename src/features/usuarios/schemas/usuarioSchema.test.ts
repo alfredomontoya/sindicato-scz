@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { usuarioCreateSchema, usuarioEditSchema } from './usuarioSchema'
+import {
+  emailNuevoUsuario,
+  usuarioCreateSchema,
+  usuarioEditSchema,
+} from './usuarioSchema'
 
 describe('usuarioCreateSchema', () => {
   it('acepta un usuario válido', () => {
     expect(
       usuarioCreateSchema.safeParse({
         nombre: 'Ana Torres',
-        email: 'ana@sindicato.bo',
+        usuario: 'ana.torres',
         password: 'secreta123',
         rol: 'registro',
         estado: true,
@@ -14,11 +18,11 @@ describe('usuarioCreateSchema', () => {
     ).toBe(true)
   })
 
-  it('rechaza email inválido y contraseña corta', () => {
+  it('rechaza usuario con espacios y contraseña corta', () => {
     expect(
       usuarioCreateSchema.safeParse({
         nombre: 'Ana Torres',
-        email: 'no-email',
+        usuario: 'ana torres',
         password: '123',
         rol: 'registro',
         estado: true,
@@ -30,7 +34,7 @@ describe('usuarioCreateSchema', () => {
     expect(
       usuarioCreateSchema.safeParse({
         nombre: 'Ana Torres',
-        email: 'ana@sindicato.bo',
+        usuario: 'ana.torres',
         password: 'secreta123',
         rol: 'superadmin',
         estado: true,
@@ -48,5 +52,11 @@ describe('usuarioEditSchema', () => {
         estado: false,
       }).success,
     ).toBe(true)
+  })
+})
+
+describe('emailNuevoUsuario', () => {
+  it('compone el correo institucional', () => {
+    expect(emailNuevoUsuario('ana.torres')).toBe('ana.torres@sindicato.com')
   })
 })

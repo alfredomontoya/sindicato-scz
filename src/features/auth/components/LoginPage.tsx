@@ -21,7 +21,7 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { usuario: '', password: '' },
   })
 
   if (!loading && user !== null) {
@@ -31,7 +31,7 @@ export function LoginPage() {
   const onSubmit = async (values: LoginFormValues) => {
     setErrorAuth(null)
     try {
-      await signIn(values.email, values.password)
+      await signIn(values.usuario, values.password)
       navigate('/', { replace: true })
     } catch (error) {
       setErrorAuth(error instanceof Error ? error.message : 'No se pudo iniciar sesión.')
@@ -40,7 +40,12 @@ export function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-6 p-6">
-      <div className="text-center">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <img
+          src="/escudo-santa-cruz-700x700.png"
+          alt="Escudo de Santa Cruz"
+          className="h-24 w-auto"
+        />
         <h1 className="text-2xl font-semibold tracking-tight">Iniciar sesión</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Sindicato SCZ · Control de aportes voluntarios
@@ -55,20 +60,20 @@ export function LoginPage() {
         noValidate
       >
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="email" className="text-sm font-medium">
-            Correo electrónico
+          <label htmlFor="usuario" className="text-sm font-medium">
+            Usuario
           </label>
           <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            placeholder="usuario@sindicato.bo"
+            id="usuario"
+            type="text"
+            autoComplete="username"
+            placeholder="amontoya.jar"
             className={inputClass}
-            {...register('email')}
+            {...register('usuario')}
           />
-          {errors.email !== undefined && (
+          {errors.usuario !== undefined && (
             <p role="alert" className="text-sm text-destructive">
-              {errors.email.message}
+              {errors.usuario.message}
             </p>
           )}
         </div>
