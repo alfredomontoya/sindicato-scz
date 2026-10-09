@@ -10,7 +10,6 @@ import {
   serverTimestamp,
   startAfter,
   Timestamp,
-  updateDoc,
   where,
   type DocumentSnapshot,
   type QueryConstraint,
@@ -18,9 +17,14 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/firebase/config'
 import type { Aporte } from '@/types'
+import {
+  aplicarMovimientoCierre,
+  docIdCierre,
+  type TotalesCierre,
+} from '@/features/cierres/services/cierreService'
 import type { CreateAporteInput } from '../types'
 
-export const APORTES_PAGE_SIZE = 15
+export const APORTES_PAGE_SIZE = 10
 const CONTADOR_RECIBOS_ID = 'recibos'
 
 /** Formatea el correlativo como número de recibo de 6 dígitos. */
@@ -83,31 +87,58 @@ export async function createAporte(
   }
 
   const aporteRef = doc(collection(db, 'aportes'))
-  const numeroRecibo = await runTransaction(db, (tx) => {
+  const year = input.fecha.getFullYear()
+  const month = input.fecha.getMonth() + 1
+  const cierreRef = doc(db, 'cierres', docIdCierre(year, month))
+  const numeroRecibo = await runTransaction(db, async (tx) => {
     const contadorRef = doc(db, 'contadores', CONTADOR_RECIBOS_ID)
-    return tx.get(contadorRef).then((contadorSnap) => {
-      const actual = contadorSnap.exists()
-        ? ((contadorSnap.data() as { valor?: number }).valor ?? 0)
-        : 0
-      const siguiente = actual + 1
+    const contadorSnap = await tx.get(contadorRef)
+    const actual = contadorSnap.exists()
+      ? ((contadorSnap.data() as { valor?: number }).valor ?? 0)
+      : 0
+    const siguiente = actual + 1
+    tx.set(
+      contadorRef,
+      { valor: siguiente, updatedAt: serverTimestamp() },
+      { merge: true },
+    )
+    tx.set(aporteRef, {
+      personaId: input.personaId,
+      fecha: Timestamp.fromDate(input.fecha),
+      monto,
+      concepto,
+      numeroRecibo: formatearNumeroRecibo(siguiente),
+      usuarioRegistroId: meta.usuarioRegistroId,
+      estado: 'vigente',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    // Acumulador mensual: el total del mes queda en un solo registro.
+    const cierreSnap = await tx.get(cierreRef)
+    const base = (
+      cierreSnap.exists() ? (cierreSnap.data() as TotalesCierre) : null
+    )
+    const nuevos = aplicarMovimientoCierre(base, {
+      montoCentavos: Math.round(monto * 100),
+      esAnulacion: false,
+    })
+    if (cierreSnap.exists()) {
       tx.set(
-        contadorRef,
-        { valor: siguiente, updatedAt: serverTimestamp() },
+        cierreRef,
+        { ...nuevos, year, month, updatedAt: serverTimestamp() },
         { merge: true },
       )
-      tx.set(aporteRef, {
-        personaId: input.personaId,
-        fecha: Timestamp.fromDate(input.fecha),
-        monto,
-        concepto,
-        numeroRecibo: formatearNumeroRecibo(siguiente),
-        usuarioRegistroId: meta.usuarioRegistroId,
-        estado: 'vigente',
+    } else {
+      tx.set(cierreRef, {
+        ...nuevos,
+        year,
+        month,
+        estado: 'abierto',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       })
-      return formatearNumeroRecibo(siguiente)
-    })
+    }
+    return formatearNumeroRecibo(siguiente)
   })
   return { id: aporteRef.id, numeroRecibo }
 }
@@ -119,6 +150,7 @@ export async function getAporte(id: string): Promise<Aporte | null> {
 
 /**
  * Anula un aporte vigente. Nunca elimina el documento (trazabilidad).
+ * Mueve los montos del cierre mensual en la misma transacción.
  */
 export async function anularAporte(
   id: string,
@@ -130,24 +162,59 @@ export async function anularAporte(
     throw new Error('El motivo de anulación es obligatorio.')
   }
   const ref = doc(db, 'aportes', id)
-  const snap = await getDoc(ref)
-  if (!snap.exists()) {
-    throw new Error('El aporte no existe.')
-  }
-  if ((snap.data() as { estado?: string }).estado !== 'vigente') {
-    throw new Error('Solo se puede anular un aporte vigente.')
-  }
-  await updateDoc(ref, {
-    estado: 'anulado',
-    motivoAnulacion: motivoLimpio,
-    usuarioAnulacionId,
-    fechaAnulacion: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) {
+      throw new Error('El aporte no existe.')
+    }
+    const data = snap.data() as {
+      estado?: string
+      monto?: number
+      fecha?: Timestamp
+    }
+    if (data.estado !== 'vigente') {
+      throw new Error('Solo se puede anular un aporte vigente.')
+    }
+    tx.update(ref, {
+      estado: 'anulado',
+      motivoAnulacion: motivoLimpio,
+      usuarioAnulacionId,
+      fechaAnulacion: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    const fecha = data.fecha?.toDate() ?? new Date()
+    const year = fecha.getFullYear()
+    const month = fecha.getMonth() + 1
+    const cierreRef = doc(db, 'cierres', docIdCierre(year, month))
+    const cierreSnap = await tx.get(cierreRef)
+    const base = (
+      cierreSnap.exists() ? (cierreSnap.data() as TotalesCierre) : null
+    )
+    const nuevos = aplicarMovimientoCierre(base, {
+      montoCentavos: Math.round((data.monto ?? 0) * 100),
+      esAnulacion: true,
+    })
+    if (cierreSnap.exists()) {
+      tx.set(
+        cierreRef,
+        { ...nuevos, year, month, updatedAt: serverTimestamp() },
+        { merge: true },
+      )
+    } else {
+      tx.set(cierreRef, {
+        ...nuevos,
+        year,
+        month,
+        estado: 'abierto',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+    }
   })
 }
 
 export interface ListAportesOptions {
-  personaId: string | null
+  personaIds: string[] | null
   estado: 'vigente' | 'anulado' | null
   numeroRecibo: string
   desde: Date | null
@@ -166,7 +233,7 @@ export interface ListAportesResult {
 export async function listAportes(
   options: ListAportesOptions,
 ): Promise<ListAportesResult> {
-  const { personaId, estado, numeroRecibo, desde, hasta, usuarioRegistroId, cursor, pageSize } =
+  const { personaIds, estado, numeroRecibo, desde, hasta, usuarioRegistroId, cursor, pageSize } =
     options
   const ref = collection(db, 'aportes')
 
@@ -182,10 +249,19 @@ export async function listAportes(
     return { aportes, lastVisible: null, hasMore: false }
   }
 
+  // Listado ordenado por número de recibo descendente (correlativo con
+  // ceros a la izquierda: el orden lexicográfico equivale al numérico).
   // Índices compuestos requeridos en firestore.indexes.json.
-  const constraints: QueryConstraint[] = [orderBy('fecha', 'desc')]
-  if (personaId !== null && personaId !== '') {
-    constraints.push(where('personaId', '==', personaId))
+  const constraints: QueryConstraint[] = [orderBy('numeroRecibo', 'desc')]
+  if (personaIds !== null) {
+    if (personaIds.length === 0) {
+      return { aportes: [], lastVisible: null, hasMore: false }
+    }
+    constraints.push(
+      personaIds.length === 1
+        ? where('personaId', '==', personaIds[0])
+        : where('personaId', 'in', personaIds.slice(0, 30)),
+    )
   }
   if (estado !== null) {
     constraints.push(where('estado', '==', estado))

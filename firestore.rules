@@ -27,15 +27,21 @@ service cloud.firestore {
     }
 
     // Personas: lectura para usuarios registrados; escritura solo admin y registro.
-    // `nombreBusqueda` lo mantiene el sistema (no editable a mano en consola).
+    // `nombreBusqueda` y `ci` los mantiene el sistema.
+    // El borrado físico es solo para mantenimiento con rol admin
+    // (p. ej. regenerar datos de prueba); la app desactiva, no elimina.
     match /personas/{id} {
       allow read: if firmado() && perfilExiste();
-      allow create, update: if tieneRol(['admin', 'registro']);
-      allow delete: if false;
+      allow create: if tieneRol(['admin', 'registro'])
+        && request.resource.data.ci is string;
+      allow update: if tieneRol(['admin', 'registro']);
+      allow delete: if tieneRol(['admin']);
     }
 
-    // Aportes: nunca se editan ni eliminan; solo se crean (vigentes) o se
-    // anulan con motivo. El número de recibo lo asigna la transacción.
+    // Aportes: nunca se editan; solo se crean (vigentes) o se anulan con
+    // motivo. El número de recibo lo asigna la transacción. La app jamás
+    // elimina aportes (§17): el borrado físico queda reservado a
+    // mantenimiento con rol admin (p. ej. regenerar datos de prueba).
     match /aportes/{id} {
       allow read: if firmado() && perfilExiste();
       allow create: if tieneRol(['admin', 'registro'])
@@ -53,23 +59,43 @@ service cloud.firestore {
         && request.resource.data.usuarioAnulacionId == request.auth.uid
         && request.resource.data.diff(resource.data).changedKeys()
           .hasOnly(['estado', 'motivoAnulacion', 'usuarioAnulacionId', 'fechaAnulacion', 'updatedAt']);
-      allow delete: if false;
+      allow delete: if tieneRol(['admin']);
+    }
+
+    // Reserva de CI únicos: la crea la transacción de personas; nunca se
+    // modifica ni reutiliza (el borrado admin es solo para mantenimiento).
+    match /personaCi/{ci} {
+      allow read: if firmado() && perfilExiste();
+      allow create: if tieneRol(['admin', 'registro']);
+      allow update: if false;
+      allow delete: if tieneRol(['admin']);
+    }
+
+    // Cierres mensuales: lectura para usuarios registrados; solo admin
+    // cierra, reabre o recalcula. Las transacciones de aportes actualizan
+    // el acumulador (admin/registro).
+    match /cierres/{id} {
+      allow read: if firmado() && perfilExiste();
+      allow create, update: if tieneRol(['admin', 'registro']);
+      allow delete: if tieneRol(['admin']);
     }
 
     // Contador del correlativo de recibos: solo lo mueve la transacción.
+    // El borrado admin es solo para mantenimiento (reiniciar pruebas).
     match /contadores/{id} {
       allow read: if firmado() && perfilExiste();
       allow write: if tieneRol(['admin', 'registro']);
-      allow delete: if false;
+      allow delete: if tieneRol(['admin']);
     }
 
     // Auditoría: cualquiera registrado puede escribir eventos; solo admin lee.
-    // Nunca se modifica ni elimina.
+    // Nunca se modifica; el borrado admin es solo para mantenimiento.
     match /auditoria/{id} {
       allow read: if tieneRol(['admin']);
       allow create: if firmado() && perfilExiste()
         && request.resource.data.usuarioId == request.auth.uid;
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if tieneRol(['admin']);
     }
 
     match /{document=**} {

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router'
 import { Button } from '@/components/ui/button'
+import { GuardadoExito } from '@/components/shared/GuardadoExito'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { ErrorState, LoadingState } from '@/components/shared/States'
 import { auditar } from '@/features/auditoria/services/auditoriaService'
@@ -32,6 +33,8 @@ export function UsuarioFormPage({ modo }: { modo: 'nuevo' | 'editar' }) {
 
   const { data: usuario, isLoading, isError } = useUsuario(esEdicion ? id : undefined)
   const [error, setError] = useState<string | null>(null)
+  const [formKey, setFormKey] = useState(0)
+  const [exito, setExito] = useState<{ nombre: string; email: string } | null>(null)
 
   const {
     register,
@@ -68,6 +71,29 @@ export function UsuarioFormPage({ modo }: { modo: 'nuevo' | 'editar' }) {
     )
   }
 
+  if (exito !== null) {
+    return (
+      <main className="flex flex-col gap-4">
+        <PageHeader titulo="Nuevo usuario" />
+        <GuardadoExito
+          titulo={`Usuario creado: ${exito.nombre}`}
+          descripcion={`Credencial ${exito.email} lista para ingresar.`}
+          acciones={[
+            { etiqueta: 'Ir al listado', to: '/usuarios' },
+            {
+              etiqueta: 'Crear otro usuario',
+              variante: 'secondary',
+              onClick: () => {
+                setExito(null)
+                setFormKey((k) => k + 1)
+              },
+            },
+          ]}
+        />
+      </main>
+    )
+  }
+
   const guardar = async (values: UsuarioCreateValues) => {
     setError(null)
     try {
@@ -100,9 +126,12 @@ export function UsuarioFormPage({ modo }: { modo: 'nuevo' | 'editar' }) {
             descripcion: `${values.nombre} (${values.email})`,
           })
         }
+        setExito({ nombre: values.nombre.trim(), email: values.email.trim() })
       }
       await queryClient.invalidateQueries({ queryKey: ['usuarios'] })
-      navigate('/usuarios', { replace: true })
+      if (esEdicion) {
+        navigate('/usuarios', { replace: true })
+      }
     } catch (e) {
       console.error(e)
       setError(e instanceof Error ? e.message : 'No se pudo guardar el usuario.')
@@ -126,6 +155,7 @@ export function UsuarioFormPage({ modo }: { modo: 'nuevo' | 'editar' }) {
         </p>
       )}
       <form
+        key={formKey}
         onSubmit={(e) => {
           void handleSubmit(guardar)(e)
         }}
@@ -231,9 +261,17 @@ export function UsuarioFormPage({ modo }: { modo: 'nuevo' | 'editar' }) {
           </div>
         )}
 
-        <div>
+        <div className="flex gap-2">
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Guardando…' : esEdicion ? 'Guardar cambios' : 'Crear usuario'}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate('/usuarios')}
+            disabled={isSubmitting}
+          >
+            Cancelar
           </Button>
         </div>
       </form>

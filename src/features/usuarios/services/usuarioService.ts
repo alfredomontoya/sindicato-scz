@@ -22,7 +22,7 @@ import {
 import { db, firebaseOptions } from '@/firebase/config'
 import type { RolUsuario, Usuario } from '@/types'
 
-export const USUARIOS_PAGE_SIZE = 50
+export const USUARIOS_PAGE_SIZE = 10
 
 export async function getUsuario(uid: string): Promise<Usuario | null> {
   const snap = await getDoc(doc(db, 'usuarios', uid))

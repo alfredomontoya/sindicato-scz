@@ -22,10 +22,14 @@ const CONCEPTOS_SUGERIDOS = [
 export function AporteForm({
   personaIdInicial = '',
   personaNombreInicial = '',
+  personaCiInicial = '',
+  onCancelar,
   onSubmit,
 }: {
   personaIdInicial?: string
   personaNombreInicial?: string
+  personaCiInicial?: string
+  onCancelar?: () => void
   onSubmit: (values: AporteFormValues) => Promise<void>
 }) {
   const [error, setError] = useState<string | null>(null)
@@ -56,14 +60,11 @@ export function AporteForm({
     }
   }
 
+  // Nota: el selector vive fuera del <form> para no anidar formularios
+  // (el diálogo de registro rápido contiene su propio <form>).
+  // React Hook Form igual registra personaId vía Controller.
   return (
-    <form
-      onSubmit={(e) => {
-        void handleSubmit(guardar)(e)
-      }}
-      className="flex max-w-xl flex-col gap-4"
-      noValidate
-    >
+    <div className="flex max-w-xl flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-medium" id="persona-label">
           Persona *
@@ -75,6 +76,7 @@ export function AporteForm({
             <PersonaSelector
               personaId={field.value}
               nombreInicial={personaNombreInicial}
+              ciInicial={personaCiInicial}
               onChange={(id) => field.onChange(id)}
             />
           )}
@@ -86,6 +88,13 @@ export function AporteForm({
         )}
       </div>
 
+      <form
+        onSubmit={(e) => {
+          void handleSubmit(guardar)(e)
+        }}
+        className="flex flex-col gap-4"
+        noValidate
+      >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="fecha" className="text-sm font-medium">
@@ -161,11 +170,22 @@ export function AporteForm({
         </div>
       )}
 
-      <div>
+      <div className="flex gap-2">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Registrando…' : 'Registrar aporte'}
         </Button>
+        {onCancelar !== undefined && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancelar}
+            disabled={isSubmitting}
+          >
+            Cancelar
+          </Button>
+        )}
       </div>
-    </form>
+      </form>
+    </div>
   )
 }

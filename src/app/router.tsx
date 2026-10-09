@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Route, Routes } from 'react-router'
+import { Navigate, Route, Routes } from 'react-router'
 import { AppLayout } from '@/components/shared/AppLayout'
 import { LoadingState } from '@/components/shared/States'
 import { LoginPage } from '@/features/auth/components/LoginPage'
@@ -51,9 +51,9 @@ const UsuarioFormPage = lazy(() =>
     default: m.UsuarioFormPage,
   })),
 )
-const AuditoriaPage = lazy(() =>
-  import('@/features/auditoria/components/AuditoriaPage').then((m) => ({
-    default: m.AuditoriaPage,
+const CierresPage = lazy(() =>
+  import('@/features/cierres/components/CierresPage').then((m) => ({
+    default: m.CierresPage,
   })),
 )
 
@@ -106,6 +106,7 @@ export function AppRouter() {
             />
             <Route path="aportes/:id" element={<AporteDetailPage />} />
             <Route path="recibos/:id" element={<ReciboPage />} />
+            <Route path="cierres" element={<CierresPage />} />
             <Route
               path="usuarios"
               element={
@@ -130,14 +131,8 @@ export function AppRouter() {
                 </RoleRoute>
               }
             />
-            <Route
-              path="auditoria"
-              element={
-                <RoleRoute roles={['admin']}>
-                  <AuditoriaPage />
-                </RoleRoute>
-              }
-            />
+            {/* Auditoría oculta por ahora (se sigue registrando en segundo plano). */}
+            <Route path="auditoria" element={<Navigate to="/" replace />} />
           </Route>
         </Route>
         <Route path="*" element={<NoEncontrada />} />

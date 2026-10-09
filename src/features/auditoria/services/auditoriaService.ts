@@ -12,7 +12,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/firebase/config'
 
-export const AUDITORIA_PAGE_SIZE = 25
+export const AUDITORIA_PAGE_SIZE = 10
 
 export type AccionAuditoria =
   | 'persona.crear'

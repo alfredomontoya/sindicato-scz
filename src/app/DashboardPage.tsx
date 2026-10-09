@@ -1,8 +1,10 @@
 import { format } from 'date-fns'
 import { useMemo, useState, type ReactNode } from 'react'
+import { Link } from 'react-router'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { MoneyDisplay } from '@/components/shared/MoneyDisplay'
 import { ErrorState, LoadingState } from '@/components/shared/States'
+import { StatusBadge } from '@/components/shared/StatusBadge'
 import { AporteTable } from '@/features/aportes/components/AporteTable'
 import {
   usePersonasActivas,
@@ -10,6 +12,7 @@ import {
   useUltimosAportes,
 } from '@/features/aportes/hooks/useResumen'
 import { usePersonasNombres } from '@/features/aportes/hooks/useAportes'
+import { useCierre } from '@/features/cierres/hooks/useCierres'
 
 function Tarjeta({ titulo, valor }: { titulo: string; valor: ReactNode }) {
   return (
@@ -24,18 +27,41 @@ export function DashboardPage() {
   const [mes, setMes] = useState(() => format(new Date(), 'yyyy-MM'))
   const [year, month] = mes.split('-').map(Number) as [number, number]
 
-  const resumen = useResumenMes(year, month)
+  // El total del mes es una sola lectura al registro de cierre.
+  // Si aún no existe (mes sin movimientos), se calcula en vivo una vez.
+  const cierre = useCierre(year, month)
+  const usarRespaldo = !cierre.isLoading && cierre.data === null
+  const resumen = useResumenMes(year, month, usarRespaldo)
   const activas = usePersonasActivas()
   const ultimos = useUltimosAportes(5)
+
+  const totales =
+    cierre.data !== undefined && cierre.data !== null
+      ? {
+          total: cierre.data.total,
+          cantidad: cierre.data.cantidad,
+          anulados: cierre.data.anulados,
+        }
+      : resumen.data !== undefined
+        ? resumen.data
+        : null
 
   const ids = useMemo(
     () => [...new Set((ultimos.data ?? []).map((a) => a.personaId))],
     [ultimos.data],
   )
-  const { data: nombres } = usePersonasNombres(ids)
+  const { data: personas } = usePersonasNombres(ids)
 
-  const cargando = resumen.isLoading || activas.isLoading || ultimos.isLoading
-  const conError = resumen.isError || activas.isError || ultimos.isError
+  const cargando =
+    cierre.isLoading ||
+    activas.isLoading ||
+    ultimos.isLoading ||
+    (usarRespaldo && resumen.isLoading)
+  const conError =
+    cierre.isError ||
+    activas.isError ||
+    ultimos.isError ||
+    (usarRespaldo && resumen.isError)
 
   return (
     <main className="flex flex-col gap-4">
@@ -65,23 +91,37 @@ export function DashboardPage() {
 
       {!cargando && !conError && (
         <>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            {cierre.data !== undefined && cierre.data !== null ? (
+              <StatusBadge
+                activo={cierre.data.estado === 'abierto'}
+                texto={cierre.data.estado === 'abierto' ? 'Mes abierto' : 'Mes cerrado'}
+              />
+            ) : (
+              <span className="text-muted-foreground">
+                Mes sin cierre registrado (cálculo en vivo).
+              </span>
+            )}
+            <Link
+              to="/cierres"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              Ver cierres
+            </Link>
+          </div>
           <section
             className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
             aria-label="Resumen del período"
           >
             <Tarjeta titulo="Personas activas" valor={String(activas.data ?? 0)} />
-            <Tarjeta titulo="Aportes del mes" valor={String(resumen.data?.cantidad ?? 0)} />
+            <Tarjeta titulo="Aportes del mes" valor={String(totales?.cantidad ?? 0)} />
             <Tarjeta
               titulo="Total recaudado"
               valor={
-                resumen.data !== undefined ? (
-                  <MoneyDisplay monto={resumen.data.total} />
-                ) : (
-                  '—'
-                )
+                totales !== null ? <MoneyDisplay monto={totales.total} /> : '—'
               }
             />
-            <Tarjeta titulo="Aportes anulados" valor={String(resumen.data?.anulados ?? 0)} />
+            <Tarjeta titulo="Aportes anulados" valor={String(totales?.anulados ?? 0)} />
           </section>
           <p className="text-xs text-muted-foreground">
             Los totales consideran únicamente aportes vigentes del período seleccionado.
@@ -92,7 +132,7 @@ export function DashboardPage() {
             {(ultimos.data?.length ?? 0) === 0 ? (
               <p className="text-sm text-muted-foreground">Aún no hay aportes registrados.</p>
             ) : (
-              <AporteTable aportes={ultimos.data ?? []} nombres={nombres ?? {}} />
+              <AporteTable aportes={ultimos.data ?? []} personas={personas ?? {}} />
             )}
           </section>
         </>

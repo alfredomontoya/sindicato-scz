@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Ban, Printer } from 'lucide-react'
+import { ArrowLeft, Ban, Printer } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import { can } from '@/features/auth/permissions'
 import { usePersona } from '@/features/personas/hooks/usePersonas'
 import { useUsuario } from '@/features/usuarios/hooks/useUsuarios'
 import { montoALiteral } from '@/utils/money'
+import { formatearNombre } from '@/utils/nombres'
 import { useAporte } from '../hooks/useAportes'
 import { anularAporte } from '../services/aporteService'
 import { AnularDialog } from './AnularDialog'
@@ -92,12 +93,20 @@ export function AporteDetailPage() {
         titulo={`Recibo N.º ${aporte.numeroRecibo}`}
         descripcion={vigente ? 'Aporte vigente.' : 'Aporte anulado.'}
         acciones={
-          <Button asChild variant="outline">
-            <Link to={`/recibos/${aporte.id}`}>
-              <Printer className="size-4" aria-hidden />
-              Ver recibo
-            </Link>
-          </Button>
+          <>
+            <Button asChild variant="ghost">
+              <Link to="/aportes">
+                <ArrowLeft className="size-4" aria-hidden />
+                Volver
+              </Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link to={`/recibos/${aporte.id}`}>
+                <Printer className="size-4" aria-hidden />
+                Ver recibo
+              </Link>
+            </Button>
+          </>
         }
       />
 
@@ -115,7 +124,7 @@ export function AporteDetailPage() {
                 to={`/personas/${persona.id}`}
                 className="text-primary underline-offset-4 hover:underline"
               >
-                {persona.nombre}
+                {formatearNombre(persona.nombre)}
               </Link>
             ) : (
               '—'

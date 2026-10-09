@@ -5,7 +5,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "personaId", "order": "ASCENDING" },
-        { "fieldPath": "fecha", "order": "DESCENDING" }
+        { "fieldPath": "numeroRecibo", "order": "DESCENDING" }
       ]
     },
     {
@@ -13,7 +13,24 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "estado", "order": "ASCENDING" },
-        { "fieldPath": "fecha", "order": "DESCENDING" }
+        { "fieldPath": "numeroRecibo", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "aportes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "aportes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "ASCENDING" },
+        { "fieldPath": "monto", "order": "ASCENDING" }
       ]
     },
     {
@@ -22,7 +39,7 @@
       "fields": [
         { "fieldPath": "personaId", "order": "ASCENDING" },
         { "fieldPath": "estado", "order": "ASCENDING" },
-        { "fieldPath": "fecha", "order": "DESCENDING" }
+        { "fieldPath": "numeroRecibo", "order": "DESCENDING" }
       ]
     },
     {
@@ -30,7 +47,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "usuarioRegistroId", "order": "ASCENDING" },
-        { "fieldPath": "fecha", "order": "DESCENDING" }
+        { "fieldPath": "numeroRecibo", "order": "DESCENDING" }
       ]
     }
   ],

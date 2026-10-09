@@ -10,10 +10,12 @@ import type { Aporte } from '@/types'
 export function useResumenMes(
   year: number,
   month: number,
+  enabled = true,
 ): UseQueryResult<ResumenPeriodo, Error> {
   return useQuery({
     queryKey: ['resumen', year, month],
     queryFn: () => getResumenMes(year, month),
+    enabled,
   })
 }
 
