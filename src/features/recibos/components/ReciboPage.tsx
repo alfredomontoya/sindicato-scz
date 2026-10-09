@@ -8,7 +8,8 @@ import { usePersona } from '@/features/personas/hooks/usePersonas'
 import { useUsuario } from '@/features/usuarios/hooks/useUsuarios'
 import { useAporte } from '@/features/aportes/hooks/useAportes'
 import { montoALiteral } from '@/utils/money'
-import { INSTITUCION_NOMBRE, INSTITUCION_SUBTITULO } from '../constants'
+import { formatearNombre } from '@/utils/nombres'
+import { INSTITUCION_LOGO, INSTITUCION_NOMBRE, INSTITUCION_SUBTITULO } from '../constants'
 
 export function ReciboPage() {
   const { id } = useParams()
@@ -44,6 +45,7 @@ export function ReciboPage() {
           </Link>
         </Button>
         <Button
+          variant="secondary"
           onClick={() => window.print()}
           disabled={!vigente}
           title={vigente ? 'Imprimir recibo' : 'El recibo anulado no se imprime'}
@@ -58,10 +60,17 @@ export function ReciboPage() {
         className="print-area mx-auto w-full max-w-xl rounded-lg border bg-card p-6 sm:p-8"
       >
         <header className="border-b pb-4 text-center">
-          <p className="text-xl font-bold tracking-tight">{INSTITUCION_NOMBRE}</p>
+          <img
+            src={INSTITUCION_LOGO}
+            alt={INSTITUCION_NOMBRE}
+            className="mx-auto h-20 w-auto"
+          />
+          <p className="mt-2 text-xl font-bold tracking-tight">{INSTITUCION_NOMBRE}</p>
           <p className="text-sm text-muted-foreground">{INSTITUCION_SUBTITULO}</p>
           <p className="mt-2 text-sm font-semibold">
-            RECIBO N.º {aporte.numeroRecibo}
+            <span className="rounded bg-highlight px-2 py-0.5 text-highlight-foreground">
+              RECIBO N.º {aporte.numeroRecibo}
+            </span>
           </p>
           {!vigente && (
             <p
@@ -83,7 +92,9 @@ export function ReciboPage() {
           <div className="flex justify-between gap-4">
             <dt className="text-muted-foreground">Recibí de</dt>
             <dd className="text-right font-medium">
-              {persona !== undefined && persona !== null ? persona.nombre : '—'}
+              {persona !== undefined && persona !== null
+                ? formatearNombre(persona.nombre)
+                : '—'}
             </dd>
           </div>
           <div className="flex justify-between gap-4">

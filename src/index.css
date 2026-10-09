@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -11,6 +13,12 @@
   --color-input: var(--input);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
@@ -20,20 +28,55 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.14 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.14 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.55 0 0);
-  --border: oklch(0.92 0 0);
-  --input: oklch(0.92 0 0);
-  --primary: oklch(0.2 0 0);
-  --primary-foreground: oklch(0.98 0 0);
-  --ring: oklch(0.55 0 0);
-  --destructive: oklch(0.58 0.22 27);
-  --destructive-foreground: oklch(0.98 0 0);
+  color-scheme: light;
+  --background: #eef5ec;
+  --foreground: #0b212c;
+  --card: #fdfffd;
+  --card-foreground: #0b212c;
+  --muted: #d8e8dd;
+  --muted-foreground: #3f554e;
+  --border: #bcd4c6;
+  --input: #bcd4c6;
+  --primary: #023d54;
+  --primary-foreground: #ffffff;
+  --secondary: #9a6735;
+  --secondary-foreground: #ffffff;
+  --accent: #94dea5;
+  --accent-foreground: #0a2e1c;
+  --highlight: #ffff66;
+  --highlight-foreground: #232300;
+  --ring: #023d54;
+  --destructive: #b3261e;
+  --destructive-foreground: #ffffff;
   --radius: 0.625rem;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #071820;
+  --foreground: #e3efe9;
+  --card: #0d2530;
+  --card-foreground: #e3efe9;
+  --muted: #15303c;
+  --muted-foreground: #9db8ab;
+  --border: #234354;
+  --input: #234354;
+  --primary: #94dea5;
+  --primary-foreground: #062419;
+  --secondary: #c49a6c;
+  --secondary-foreground: #241808;
+  --accent: #123a4d;
+  --accent-foreground: #cdeadb;
+  --highlight: #ffff66;
+  --highlight-foreground: #202000;
+  --ring: #94dea5;
+  --destructive: #e0685c;
+  --destructive-foreground: #1c0f0c;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
 @media print {
@@ -54,5 +97,23 @@
     border-radius: 0 !important;
     max-width: 100% !important;
     box-shadow: none !important;
+  }
+
+  /* Los recibos siempre se imprimen en claro. */
+  .print-area {
+    --background: #ffffff;
+    --foreground: #0b212c;
+    --card: #ffffff;
+    --card-foreground: #0b212c;
+    --muted: #edf4ee;
+    --muted-foreground: #3f554e;
+    --border: #bcd4c6;
+    --destructive: #b3261e;
+    --primary: #023d54;
+    --primary-foreground: #ffffff;
+    --highlight: #ffff66;
+    --highlight-foreground: #232300;
+    background: #fff !important;
+    color: #0b212c !important;
   }
 }

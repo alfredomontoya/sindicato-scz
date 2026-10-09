@@ -1,8 +1,9 @@
 import { LogOut } from 'lucide-react'
-import { NavLink, Outlet, useNavigate } from 'react-router'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { can } from '@/features/auth/permissions'
 import { useAuth } from '@/features/auth/components/AuthProvider'
+import { ThemeToggle } from '@/features/theme/components/ThemeToggle'
 
 function linkClass({ isActive }: { isActive: boolean }): string {
   return `rounded-md px-3 py-2 text-sm font-medium ${
@@ -32,14 +33,23 @@ export function AppLayout() {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-4 p-4 sm:p-6">
       <header className="no-print flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-lg font-semibold">Sindicato SCZ · Aportes</p>
-          {profile !== null && (
-            <p className="text-sm text-muted-foreground">
-              {profile.nombre} · {ROL_ETIQUETA[profile.rol] ?? profile.rol}
-            </p>
-          )}
-        </div>
+        <Link to="/" className="flex items-center gap-3" aria-label="Inicio">
+          <img
+            src="/escudo-santa-cruz.webp"
+            alt="Escudo de Santa Cruz"
+            className="h-12 w-auto"
+          />
+          <span>
+            <span className="block text-lg font-semibold leading-tight">
+              Control de aportes
+            </span>
+            {profile !== null && (
+              <span className="block text-sm text-muted-foreground">
+                {profile.nombre} · {ROL_ETIQUETA[profile.rol] ?? profile.rol}
+              </span>
+            )}
+          </span>
+        </Link>
         <nav className="flex flex-wrap items-center gap-1" aria-label="Principal">
           <NavLink to="/" end className={linkClass}>
             Panel
@@ -50,16 +60,15 @@ export function AppLayout() {
           <NavLink to="/aportes" className={linkClass}>
             Aportes
           </NavLink>
+          <NavLink to="/cierres" className={linkClass}>
+            Cierres
+          </NavLink>
           {can(profile?.rol, 'usuarios.gestionar') && (
             <NavLink to="/usuarios" className={linkClass}>
               Usuarios
             </NavLink>
           )}
-          {can(profile?.rol, 'auditoria.ver') && (
-            <NavLink to="/auditoria" className={linkClass}>
-              Auditoría
-            </NavLink>
-          )}
+          <ThemeToggle />
           <Button
             variant="ghost"
             size="sm"
