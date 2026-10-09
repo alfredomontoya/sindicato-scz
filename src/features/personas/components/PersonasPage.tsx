@@ -58,8 +58,8 @@ export function PersonasPage() {
           />
           <input
             type="search"
-            aria-label="Buscar por nombre"
-            placeholder="Buscar por nombre…"
+            aria-label="Buscar por nombre o CI"
+            placeholder="Buscar por nombre o CI…"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             className={`${inputClass} pl-9`}

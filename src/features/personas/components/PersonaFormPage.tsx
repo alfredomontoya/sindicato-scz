@@ -1,9 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
+import { GuardadoExito } from '@/components/shared/GuardadoExito'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { ErrorState, LoadingState } from '@/components/shared/States'
 import { auditar } from '@/features/auditoria/services/auditoriaService'
 import { useAuth } from '@/features/auth/components/AuthProvider'
+import { formatearNombre } from '@/utils/nombres'
 import { usePersona } from '../hooks/usePersonas'
 import { createPersona, updatePersona } from '../services/personaService'
 import type { PersonaFormValues } from '../schemas/personaSchema'
@@ -15,6 +18,8 @@ export function PersonaFormPage({ modo }: { modo: 'nueva' | 'editar' }) {
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const esEdicion = modo === 'editar'
+  const [formKey, setFormKey] = useState(0)
+  const [exito, setExito] = useState<{ id: string; nombre: string } | null>(null)
 
   const { data: persona, isLoading, isError } = usePersona(esEdicion ? id : undefined)
 
@@ -66,7 +71,31 @@ export function PersonaFormPage({ modo }: { modo: 'nueva' | 'editar' }) {
       })
     }
     await queryClient.invalidateQueries({ queryKey: ['personas'] })
-    navigate(`/personas/${nuevoId}`, { replace: true })
+    setExito({ id: nuevoId, nombre: values.nombre.trim() })
+  }
+
+  if (exito !== null) {
+    return (
+      <main className="flex flex-col gap-4">
+        <PageHeader titulo="Nueva persona" />
+        <GuardadoExito
+          titulo={`Persona registrada: ${formatearNombre(exito.nombre)}`}
+          descripcion="Ya puede registrar aportes a su nombre."
+          acciones={[
+            { etiqueta: 'Ver detalle', to: `/personas/${exito.id}` },
+            { etiqueta: 'Ir al listado', to: '/personas', variante: 'outline' },
+            {
+              etiqueta: 'Registrar otra persona',
+              variante: 'secondary',
+              onClick: () => {
+                setExito(null)
+                setFormKey((k) => k + 1)
+              },
+            },
+          ]}
+        />
+      </main>
+    )
   }
 
   return (
@@ -80,10 +109,12 @@ export function PersonaFormPage({ modo }: { modo: 'nueva' | 'editar' }) {
         }
       />
       <PersonaForm
+        key={formKey}
         valoresIniciales={
           persona !== undefined && persona !== null
             ? {
                 nombre: persona.nombre,
+                ci: persona.ci,
                 direccion: persona.direccion,
                 telefono: persona.telefono,
                 estado: persona.estado,
@@ -91,6 +122,7 @@ export function PersonaFormPage({ modo }: { modo: 'nueva' | 'editar' }) {
             : undefined
         }
         textoBoton={esEdicion ? 'Guardar cambios' : 'Registrar persona'}
+        onCancelar={() => navigate('/personas')}
         onSubmit={guardar}
       />
     </main>

@@ -3,18 +3,20 @@ import { Link } from 'react-router'
 import { DateDisplay } from '@/components/shared/DateDisplay'
 import { MoneyDisplay } from '@/components/shared/MoneyDisplay'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import type { DatoPersona } from '../hooks/useAportes'
 import type { Aporte } from '@/types'
+import { formatearNombre } from '@/utils/nombres'
 
 export function AporteTable({
   aportes,
-  nombres,
+  personas,
 }: {
   aportes: Aporte[]
-  nombres: Record<string, string>
+  personas: Record<string, DatoPersona>
 }) {
   return (
     <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full min-w-[720px] text-sm">
+      <table className="w-full min-w-[800px] text-sm">
         <thead>
           <tr className="border-b bg-muted/50 text-left">
             <th scope="col" className="px-4 py-2.5 font-medium">
@@ -25,6 +27,9 @@ export function AporteTable({
             </th>
             <th scope="col" className="px-4 py-2.5 font-medium">
               Persona
+            </th>
+            <th scope="col" className="px-4 py-2.5 font-medium">
+              CI
             </th>
             <th scope="col" className="hidden px-4 py-2.5 font-medium lg:table-cell">
               Concepto
@@ -41,15 +46,18 @@ export function AporteTable({
           </tr>
         </thead>
         <tbody>
-          {aportes.map((a) => (
-            <tr key={a.id} className="border-b last:border-0 hover:bg-muted/30">
-              <td className="px-4 py-2.5 font-mono font-medium">{a.numeroRecibo}</td>
-              <td className="px-4 py-2.5">
-                <DateDisplay fecha={a.fecha} />
-              </td>
-              <td className="max-w-45 truncate px-4 py-2.5">
-                {nombres[a.personaId] ?? '—'}
-              </td>
+          {aportes.map((a) => {
+            const dato = personas[a.personaId]
+            const nombre = dato === undefined ? '—' : formatearNombre(dato.nombre)
+            const ci = dato === undefined || dato.ci === '' ? '—' : dato.ci
+            return (
+              <tr key={a.id} className="border-b last:border-0 hover:bg-muted/30">
+                <td className="px-4 py-2.5 font-mono font-medium">{a.numeroRecibo}</td>
+                <td className="px-4 py-2.5">
+                  <DateDisplay fecha={a.fecha} />
+                </td>
+                <td className="max-w-45 truncate px-4 py-2.5">{nombre}</td>
+                <td className="px-4 py-2.5 font-mono">{ci}</td>
               <td className="hidden max-w-55 truncate px-4 py-2.5 text-muted-foreground lg:table-cell">
                 {a.concepto}
               </td>
@@ -72,9 +80,10 @@ export function AporteTable({
                     <Eye className="size-4" aria-hidden />
                   </Link>
                 </div>
-              </td>
-            </tr>
-          ))}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

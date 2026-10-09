@@ -10,7 +10,9 @@
  * (nombre desde SEED_ADMIN_NOMBRE o "Administrador"). El documento
  * `usuarios/{uid}` con rol admin se crea una sola vez en consola
  * (las reglas impiden el auto-registro) y luego se re-ejecuta.
- * Se detiene si ya existen personas (no duplica datos).
+ * Se detiene si ya existen personas (no duplica datos), salvo con
+ * `--regenerar`, que vacía las colecciones de prueba y vuelve a cargar:
+ *   pnpm seed -- --regenerar
  */
 import {
   createUserWithEmailAndPassword,
@@ -18,7 +20,13 @@ import {
   signOut,
   updateProfile,
 } from 'firebase/auth'
-import { getDocs, limit, query } from 'firebase/firestore'
+import {
+  collection,
+  getDocs,
+  limit,
+  query,
+  writeBatch,
+} from 'firebase/firestore'
 import { auditar } from '@/features/auditoria/services/auditoriaService'
 import {
   anularAporte,
@@ -27,11 +35,12 @@ import {
 } from '@/features/aportes/services/aporteService'
 import { createPersona } from '@/features/personas/services/personaService'
 import { getUsuario } from '@/features/usuarios/services/usuarioService'
-import { auth } from '@/firebase/config'
+import { auth, db } from '@/firebase/config'
 import { collections } from '@/firebase/firestore'
 
 interface PersonaSeed {
   nombre: string
+  ci: string
   direccion: string
   telefono: string
   estado: boolean
@@ -47,14 +56,14 @@ interface AporteSeed {
 }
 
 const PERSONAS: PersonaSeed[] = [
-  { nombre: 'Juan Carlos Pérez', direccion: 'Av. Brasil 1234', telefono: '77712345', estado: true },
-  { nombre: 'María Elena López', direccion: 'Calle Sucre 456', telefono: '77654321', estado: true },
-  { nombre: 'Pedro Gómez Quispe', direccion: 'Av. Banzer 789', telefono: '77556789', estado: true },
-  { nombre: 'Ana María Torres', direccion: 'Calle Libertad 321', telefono: '77443210', estado: true },
-  { nombre: 'Luis Fernando Vargas', direccion: 'Av. Piraí 654', telefono: '77332109', estado: false },
-  { nombre: 'Carmen Rosa Flores', direccion: 'Calle 24 de Septiembre 987', telefono: '77221098', estado: true },
-  { nombre: 'Jorge Luis Morales', direccion: 'Av. Viedma 147', telefono: '77110987', estado: true },
-  { nombre: 'Rosa Isabel Chávez', direccion: 'Calle Cochabamba 258', telefono: '77009876', estado: true },
+  { nombre: 'Juan Carlos Pérez', ci: '4821356', direccion: 'Av. Brasil 1234', telefono: '77712345', estado: true },
+  { nombre: 'María Elena López', ci: '5937284', direccion: 'Calle Sucre 456', telefono: '77654321', estado: true },
+  { nombre: 'Pedro Gómez Quispe', ci: '6382910', direccion: 'Av. Banzer 789', telefono: '77556789', estado: true },
+  { nombre: 'Ana María Torres', ci: '7214563', direccion: 'Calle Libertad 321', telefono: '77443210', estado: true },
+  { nombre: 'Luis Fernando Vargas', ci: '8152397', direccion: 'Av. Piraí 654', telefono: '77332109', estado: false },
+  { nombre: 'Carmen Rosa Flores', ci: '9046172', direccion: 'Calle 24 de Septiembre 987', telefono: '77221098', estado: true },
+  { nombre: 'Jorge Luis Morales', ci: '3765814', direccion: 'Av. Viedma 147', telefono: '77110987', estado: true },
+  { nombre: 'Rosa Isabel Chávez', ci: '6257903', direccion: 'Calle Cochabamba 258', telefono: '77009876', estado: true },
 ]
 
 const APORTES: AporteSeed[] = [
@@ -127,6 +136,21 @@ async function asegurarAdmin(email: string, password: string): Promise<string> {
   }
 }
 
+/** Vacía una colección por lotes. Solo para regenerar datos de prueba. */
+async function vaciarColeccion(nombre: string): Promise<number> {
+  let total = 0
+  for (;;) {
+    const snap = await getDocs(query(collection(db, nombre), limit(400)))
+    if (snap.empty) {
+      return total
+    }
+    const lote = writeBatch(db)
+    snap.docs.forEach((d) => lote.delete(d.ref))
+    await lote.commit()
+    total += snap.size
+  }
+}
+
 async function main(): Promise<void> {
   const email = process.env.SEED_ADMIN_EMAIL
   const password = process.env.SEED_ADMIN_PASSWORD
@@ -159,9 +183,21 @@ async function main(): Promise<void> {
     if (perfil.rol !== 'admin' || !perfil.estado) {
       throw new Error('El usuario del seed debe ser admin y estar activo.')
     }
-    const existentes = await getDocs(query(collections.personas, limit(1)))
-    if (!existentes.empty) {
-      throw new Error('Ya existen personas registradas. El seed no duplica datos.')
+    const regenerar = process.argv.includes('--regenerar')
+    if (regenerar) {
+      // Solo datos de prueba y solo con rol admin (ver reglas). La app
+      // jamás elimina aportes: en operación normal se anulan (§17).
+      for (const nombre of ['personas', 'aportes', 'auditoria', 'contadores', 'personaCi']) {
+        const eliminados = await vaciarColeccion(nombre)
+        console.log(`${nombre}: ${eliminados} documento(s) eliminado(s)`)
+      }
+    } else {
+      const existentes = await getDocs(query(collections.personas, limit(1)))
+      if (!existentes.empty) {
+        throw new Error(
+          'Ya existen personas registradas. Use `pnpm seed -- --regenerar` para vaciar y volver a cargar.',
+        )
+      }
     }
 
     const ids: string[] = []

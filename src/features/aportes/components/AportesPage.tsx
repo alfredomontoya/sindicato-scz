@@ -7,7 +7,8 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/shared/States
 import { useAuth } from '@/features/auth/components/AuthProvider'
 import { can } from '@/features/auth/permissions'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { usePersona } from '@/features/personas/hooks/usePersonas'
+import { usePersona, usePersonas } from '@/features/personas/hooks/usePersonas'
+import { formatearNombre } from '@/utils/nombres'
 import { fechaInputADate } from '../services/aporteService'
 import { useAportes, usePersonasNombres } from '../hooks/useAportes'
 import { AporteTable } from './AporteTable'
@@ -21,22 +22,47 @@ export function AportesPage() {
   const [params] = useSearchParams()
 
   const [personaId, setPersonaId] = useState(params.get('personaId') ?? '')
+  const [personaTxt, setPersonaTxt] = useState('')
   const [recibo, setRecibo] = useState('')
   const [estado, setEstado] = useState<'todos' | 'vigente' | 'anulado'>('vigente')
   const [desde, setDesde] = useState('')
   const [hasta, setHasta] = useState('')
 
   const reciboDeb = useDebouncedValue(recibo)
+  const personaTxtDeb = useDebouncedValue(personaTxt)
   const { data: personaFiltro } = usePersona(personaId === '' ? undefined : personaId)
+
+  // Filtro por nombre o CI: primero se resuelven los ids coincidentes.
+  const buscarPersonas =
+    personaId === '' && personaTxtDeb.trim() !== ''
+  const personasMatch = usePersonas(
+    { search: personaTxtDeb, estado: null, telefono: '' },
+    buscarPersonas,
+  )
+  const personaIds = useMemo<string[] | null>(() => {
+    if (personaId !== '') {
+      return [personaId]
+    }
+    if (personaTxtDeb.trim() === '') {
+      return null
+    }
+    const paginas = personasMatch.data?.pages.flatMap((p) => p.personas) ?? []
+    if (personasMatch.isLoading || personasMatch.isError) {
+      return []
+    }
+    return paginas.slice(0, 30).map((p) => p.id)
+  }, [personaId, personaTxtDeb, personasMatch.data, personasMatch.isLoading, personasMatch.isError])
 
   const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useAportes({
-      personaId: personaId === '' ? null : personaId,
+      personaIds,
       estado: estado === 'todos' ? null : estado,
       numeroRecibo: reciboDeb,
       desde: desde === '' ? null : fechaInputADate(desde),
       hasta: hasta === '' ? null : fechaInputADate(hasta),
     })
+  const cargando = isLoading || (buscarPersonas && personasMatch.isLoading)
+  const conError = isError || (buscarPersonas && personasMatch.isError)
 
   const aportes = useMemo(
     () => data?.pages.flatMap((p) => p.aportes) ?? [],
@@ -46,7 +72,7 @@ export function AportesPage() {
     () => [...new Set(aportes.map((a) => a.personaId))],
     [aportes],
   )
-  const { data: nombres } = usePersonasNombres(ids)
+  const { data: personas } = usePersonasNombres(ids)
 
   return (
     <main className="flex flex-col gap-4">
@@ -68,7 +94,7 @@ export function AportesPage() {
       {personaFiltro !== undefined && personaFiltro !== null && (
         <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">Filtrado por:</span>
-          <span className="font-medium">{personaFiltro.nombre}</span>
+          <span className="font-medium">{formatearNombre(personaFiltro.nombre)}</span>
           <button
             type="button"
             onClick={() => setPersonaId('')}
@@ -80,7 +106,7 @@ export function AportesPage() {
       )}
 
       <section
-        className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4"
+        className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
         aria-label="Filtros"
       >
         <input
@@ -91,6 +117,16 @@ export function AportesPage() {
           onChange={(e) => setRecibo(e.target.value)}
           className={inputClass}
         />
+        {personaId === '' && (
+          <input
+            type="search"
+            aria-label="Filtrar por nombre o CI de la persona"
+            placeholder="Persona (nombre o CI)…"
+            value={personaTxt}
+            onChange={(e) => setPersonaTxt(e.target.value)}
+            className={inputClass}
+          />
+        )}
         <select
           aria-label="Filtrar por estado"
           value={estado}
@@ -119,8 +155,8 @@ export function AportesPage() {
         />
       </section>
 
-      {isLoading && <LoadingState mensaje="Cargando aportes…" />}
-      {isError && (
+      {cargando && <LoadingState mensaje="Cargando aportes…" />}
+      {conError && (
         <>
           <ErrorState mensaje="No se pudieron cargar los aportes. Si el problema persiste, verifique que los índices de Firestore estén desplegados." />
           <div>
@@ -135,11 +171,11 @@ export function AportesPage() {
           </div>
         </>
       )}
-      {!isLoading && !isError && aportes.length === 0 && (
+      {!cargando && !conError && aportes.length === 0 && (
         <EmptyState mensaje="No hay aportes con esos criterios." />
       )}
-      {!isLoading && !isError && aportes.length > 0 && (
-        <AporteTable aportes={aportes} nombres={nombres ?? {}} />
+      {!cargando && !conError && aportes.length > 0 && (
+        <AporteTable aportes={aportes} personas={personas ?? {}} />
       )}
 
       {hasNextPage === true && (

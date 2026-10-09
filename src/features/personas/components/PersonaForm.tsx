@@ -13,10 +13,12 @@ const inputClass =
 export function PersonaForm({
   valoresIniciales,
   textoBoton = 'Guardar',
+  onCancelar,
   onSubmit,
 }: {
   valoresIniciales?: PersonaFormValues
   textoBoton?: string
+  onCancelar?: () => void
   onSubmit: (values: PersonaFormValues) => Promise<void>
 }) {
   const [error, setError] = useState<string | null>(null)
@@ -28,6 +30,7 @@ export function PersonaForm({
     resolver: zodResolver(personaSchema),
     defaultValues: valoresIniciales ?? {
       nombre: '',
+      ci: '',
       direccion: '',
       telefono: '',
       estado: true,
@@ -40,7 +43,9 @@ export function PersonaForm({
       await onSubmit(values)
     } catch (e) {
       console.error(e)
-      setError('No se pudo guardar la persona. Intente nuevamente.')
+      setError(
+        e instanceof Error ? e.message : 'No se pudo guardar la persona.',
+      )
     }
   }
 
@@ -67,6 +72,28 @@ export function PersonaForm({
         {errors.nombre !== undefined && (
           <p role="alert" className="text-sm text-destructive">
             {errors.nombre.message}
+          </p>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="ci" className="text-sm font-medium">
+          CI *
+        </label>
+        <input
+          id="ci"
+          type="text"
+          autoComplete="off"
+          placeholder="Ej.: 4821356"
+          className={`${inputClass} uppercase`}
+          {...register('ci')}
+        />
+        <p className="text-xs text-muted-foreground">
+          Único, solo letras y números, sin espacios.
+        </p>
+        {errors.ci !== undefined && (
+          <p role="alert" className="text-sm text-destructive">
+            {errors.ci.message}
           </p>
         )}
       </div>
@@ -130,10 +157,20 @@ export function PersonaForm({
         </div>
       )}
 
-      <div>
+      <div className="flex gap-2">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Guardando…' : textoBoton}
         </Button>
+        {onCancelar !== undefined && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancelar}
+            disabled={isSubmitting}
+          >
+            Cancelar
+          </Button>
+        )}
       </div>
     </form>
   )

@@ -2,6 +2,7 @@ import { Eye, Pencil } from 'lucide-react'
 import { Link } from 'react-router'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import type { Persona } from '@/types'
+import { formatearNombre } from '@/utils/nombres'
 
 export function PersonaTable({
   personas,
@@ -12,11 +13,14 @@ export function PersonaTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full min-w-[640px] text-sm">
+      <table className="w-full min-w-[720px] text-sm">
         <thead>
           <tr className="border-b bg-muted/50 text-left">
             <th scope="col" className="px-4 py-2.5 font-medium">
               Nombre
+            </th>
+            <th scope="col" className="px-4 py-2.5 font-medium">
+              CI
             </th>
             <th scope="col" className="hidden px-4 py-2.5 font-medium md:table-cell">
               Dirección
@@ -35,7 +39,8 @@ export function PersonaTable({
         <tbody>
           {personas.map((p) => (
             <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
-              <td className="px-4 py-2.5 font-medium">{p.nombre}</td>
+              <td className="px-4 py-2.5 font-medium">{formatearNombre(p.nombre)}</td>
+              <td className="px-4 py-2.5 font-mono">{p.ci === '' ? '—' : p.ci}</td>
               <td className="hidden max-w-55 truncate px-4 py-2.5 text-muted-foreground md:table-cell">
                 {p.direccion === '' ? '—' : p.direccion}
               </td>

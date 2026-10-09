@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Pencil } from 'lucide-react'
+import { ArrowLeft, Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ErrorState, LoadingState } from '@/components/shared/States'
 import { auditar } from '@/features/auditoria/services/auditoriaService'
 import { useAuth } from '@/features/auth/components/AuthProvider'
+import { formatearNombre } from '@/utils/nombres'
 import { can } from '@/features/auth/permissions'
 import { usePersona } from '../hooks/usePersonas'
 import { setPersonaEstado } from '../services/personaService'
@@ -79,17 +80,25 @@ export function PersonaDetailPage() {
   return (
     <main className="flex flex-col gap-4">
       <PageHeader
-        titulo={persona.nombre}
+        titulo={formatearNombre(persona.nombre)}
         descripcion="Información registrada de la persona."
         acciones={
-          puedeEditar ? (
-            <Button asChild variant="outline">
-              <Link to={`/personas/${persona.id}/editar`}>
-                <Pencil className="size-4" aria-hidden />
-                Editar
+          <>
+            <Button asChild variant="ghost">
+              <Link to="/personas">
+                <ArrowLeft className="size-4" aria-hidden />
+                Volver
               </Link>
             </Button>
-          ) : undefined
+            {puedeEditar && (
+              <Button asChild variant="outline">
+                <Link to={`/personas/${persona.id}/editar`}>
+                  <Pencil className="size-4" aria-hidden />
+                  Editar
+                </Link>
+              </Button>
+            )}
+          </>
         }
       />
 
@@ -102,6 +111,7 @@ export function PersonaDetailPage() {
             </dd>
           </div>
           <Fila etiqueta="Dirección" valor={persona.direccion === '' ? '—' : persona.direccion} />
+          <Fila etiqueta="CI" valor={persona.ci === '' ? '—' : persona.ci} />
           <Fila etiqueta="Teléfono" valor={persona.telefono === '' ? '—' : persona.telefono} />
         </dl>
         {puedeEditar && (
@@ -123,7 +133,7 @@ export function PersonaDetailPage() {
             to={`/aportes?personaId=${persona.id}`}
             className="text-primary underline-offset-4 hover:underline"
           >
-            Ver historial de aportes de {persona.nombre}
+            Ver historial de aportes de {formatearNombre(persona.nombre)}
           </Link>
         </p>
       </section>

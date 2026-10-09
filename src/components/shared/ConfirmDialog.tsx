@@ -63,10 +63,10 @@ export function ConfirmDialog({
           {descripcion}
         </p>
         <div className="mt-6 flex justify-end gap-2">
-          <Button ref={cancelarRef} variant="outline" onClick={onCancelar} disabled={confirmando}>
+          <Button ref={cancelarRef} type="button" variant="outline" onClick={onCancelar} disabled={confirmando}>
             Cancelar
           </Button>
-          <Button variant="destructive" onClick={onConfirmar} disabled={confirmando}>
+          <Button type="button" variant="destructive" onClick={onConfirmar} disabled={confirmando}>
             {confirmando ? 'Procesando…' : textoConfirmar}
           </Button>
         </div>

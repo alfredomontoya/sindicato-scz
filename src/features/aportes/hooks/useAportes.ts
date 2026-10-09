@@ -13,10 +13,10 @@ import {
   listAportes,
   type ListAportesResult,
 } from '../services/aporteService'
-import { getPersonaNombre } from '@/features/personas/services/personaService'
+import { getPersona } from '@/features/personas/services/personaService'
 
 export interface AporteFilters {
-  personaId: string | null
+  personaIds: string[] | null
   estado: 'vigente' | 'anulado' | null
   numeroRecibo: string
   desde: Date | null
@@ -32,7 +32,7 @@ export function useAportes(
     queryKey: ['aportes', filters],
     queryFn: ({ pageParam }) =>
       listAportes({
-        personaId: filters.personaId,
+        personaIds: filters.personaIds,
         estado: filters.estado,
         numeroRecibo: filters.numeroRecibo,
         desde: filters.desde,
@@ -60,17 +60,28 @@ export function useAporte(id: string | undefined): UseQueryResult<Aporte | null,
   })
 }
 
-/** Resuelve los nombres de un conjunto de personas (una lectura por id). */
+export interface DatoPersona {
+  nombre: string
+  ci: string
+}
+
+/** Resuelve nombre y CI de un conjunto de personas (una lectura por id). */
 export function usePersonasNombres(
   ids: string[],
-): UseQueryResult<Record<string, string>, Error> {
+): UseQueryResult<Record<string, DatoPersona>, Error> {
   const clave = [...ids].sort().join(',')
   return useQuery({
     queryKey: ['personas-nombres', clave],
     queryFn: async () => {
       const unicos = [...new Set(ids)].filter((id) => id !== '')
       const entradas = await Promise.all(
-        unicos.map(async (id) => [id, await getPersonaNombre(id)] as const),
+        unicos.map(async (id) => {
+          const p = await getPersona(id)
+          return [
+            id,
+            { nombre: p?.nombre ?? '—', ci: p?.ci ?? '' },
+          ] as const
+        }),
       )
       return Object.fromEntries(entradas)
     },

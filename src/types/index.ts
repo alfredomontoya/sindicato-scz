@@ -15,6 +15,8 @@ export interface Usuario {
 export interface Persona {
   id: string
   nombre: string
+  /** CI único, alfanumérico en mayúsculas (3 a 20 caracteres). */
+  ci: string
   /** Nombre normalizado (minúsculas, sin tildes) para búsquedas por prefijo. */
   nombreBusqueda: string
   direccion: string
@@ -50,4 +52,22 @@ export interface Auditoria {
   entidadId: string
   descripcion?: string
   createdAt: Timestamp
+}
+
+export type EstadoCierre = 'abierto' | 'cerrado'
+
+/** Snapshot mensual de aportes: el total del mes es una sola lectura. */
+export interface CierreMensual {
+  id: string
+  year: number
+  month: number
+  total: number
+  cantidad: number
+  anulados: number
+  totalAnulados: number
+  estado: EstadoCierre
+  cerradoPor?: string
+  cerradoEl?: Timestamp
+  createdAt: Timestamp
+  updatedAt: Timestamp
 }
